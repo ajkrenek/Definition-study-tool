@@ -279,7 +279,6 @@ class top_level_ui():
 
     def word_edit_on_click(self, event):
         selection = event.widget.curselection()
-        print(selection)
         index = selection[0]
         data = event.widget.get(index)
         self.new_word.delete("1.0", "end")
@@ -297,25 +296,21 @@ class top_level_ui():
         self.current_definitions.delete(cursor_selection)
         del self.dictionary[definition]
 
+    def update(self):
+        self.added_word = self.new_word.get("1.0", "end").strip()
+        self.added_definition = self.new_definition.get("1.0", "end").strip()
+        self.dictionary.update({self.added_definition:self.added_word})
+        self.current_words.insert('end', self.added_word)
+        self.current_definitions.insert('end', self.added_definition)
+        self.new_word.delete("1.0", "end")
+        self.new_definition.delete("1.0", "end")
 
     def add(self, method):
         if method == 'create':
-            self.added_word = self.new_word.get("1.0", "end").strip()
-            self.added_definition = self.new_definition.get("1.0", "end").strip()
-            self.dictionary.update({self.added_definition:self.added_word})
-            self.current_words.insert('end', self.added_word)
-            self.current_definitions.insert('end', self.added_definition)
-            self.new_word.delete("1.0", "end")
-            self.new_definition.delete("1.0", "end")
+            self.update()
         else:
             with open(self.a_current_set, 'a') as fp:
-                self.added_word = self.new_word.get("1.0", "end").strip()
-                self.added_definition = self.new_definition.get("1.0", "end").strip()
-                self.dictionary.update({self.added_definition:self.added_word})
-                self.current_words.insert('end', self.added_word)
-                self.current_definitions.insert('end', self.added_definition)
-                self.new_word.delete("1.0", "end")
-                self.new_definition.delete("1.0", "end")
+                self.update()
 
 
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - END OF TOP LEVEL INTERFACE -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
