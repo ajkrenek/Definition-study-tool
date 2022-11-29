@@ -6,43 +6,41 @@ import glob, os, json, random
 
 BACKGROUND_COLOR = "#B1DDC6"
 window = Tk()
-window.title('Flash card selection' )
+window.title('Flash Card Memorizer')
 window.config(padx=50, pady=50, bg=BACKGROUND_COLOR)
-canvas = Canvas(width=100, height=100)
 
-show = False
 frame = Frame(window)
-
-word_box = Listbox(frame)
-for name in glob.glob('*.txt'):
-
-    word_box.insert('end', name)
-
+flash_card_set_list = Listbox(frame)
 correct_words = Listbox(frame)
 
+for name in glob.glob('*.txt'):                                     #displays all text files in same directory
+    flash_card_set_list.insert('end', name)
+
+show = False
 temp_list = []
 compare_list = []
+
+
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - MAIN FUNCTIONS -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 def list_select():
-    if word_box.curselection() != ():
+    if flash_card_set_list.curselection() != ():
         displayed_word.delete("1.0", "end")
-        word_list = word_box.get(word_box.curselection())           #file select based on user click
-        print(word_box.curselection())
+        word_list = flash_card_set_list.get(flash_card_set_list.curselection())           #file select based on user click
     return word_list
 
 def create_dict():
     word_list = list_select()
     with open(word_list) as f:
         definitions_as_text = f.read()
+        definitions_as_dicts = json.loads(definitions_as_text)  #opens and converts text to a dictionary
+    return definitions_as_dicts
 
-    return definitions_as_text
 
 def generate_random_word():
     global temp_list, compare_list
 
-    definitions_as_text = create_dict()
+    definitions_as_dicts = create_dict()
 
-    definitions_as_dicts = json.loads(definitions_as_text)      #opens and converts text to a dictionary
     val_list = list(definitions_as_dicts.values())              #creates a list of the values (word)
     key_list = list(definitions_as_dicts.keys())                #creates a list of the keys (definitions)
 
@@ -67,26 +65,28 @@ def generate_random_word():
 def show_word():
     global compare_list
 
-    generate_random_word()                                                   #generates a new word
+    generate_random_word()                                          #generates a new word
     word = temp_list[0]
     displayed_word.insert(INSERT, word)                             #displays word on screen
-
+    displayed_word.configure(state='disabled')
 
 def show_definition(widget):
     global compare_list
-
     widget.pack()                                                   #unhides the correct definition text box widget
     real_definition = temp_list[1]
-    answer = input_definition.get("1.0", "end").strip()             #strips user input to get words
+    answer = input_definition.get("1.0", "end").strip()             #strips user input to get raw input
     the_answer = f"The correct answer is: {real_definition}"
-
+    input_definition.configure(state='disabled')
 
     if  answer == real_definition:
         correct_words.insert('end', real_definition)                #adds correctly answered words into a list for user to see progress
         compare_list.append(answer)                                 #adds list to internal counter
         correct_definition.insert(INSERT, 'Correct!')               #display 'correct!' to user
+        correct_definition.configure(state='disabled')
+
     else:
         correct_definition.insert(INSERT, the_answer)               #displays the correct answer to the user
+        correct_definition.configure(state='disabled')
 
 
 def hide_definition(widget):                                        #hides the display when generating the next word
@@ -96,11 +96,15 @@ def hide_definition(widget):                                        #hides the d
     widget.pack_forget()
 
 
-# # # # # #  - CLEARS ALL BOXES -
 def clear():                                                        #resets all text boxes
+    input_definition.configure(state='normal')
+    correct_definition.configure(state='normal')
+    displayed_word.configure(state='normal')
+
     displayed_word.delete("1.0", "end")
     correct_definition.delete("1.0", "end")
     input_definition.delete("1.0", "end")
+
     show_word()
 
 
@@ -123,7 +127,7 @@ def confirm_delete():
 
 def delete_list(current_set):
     os.remove(current_set)
-    word_box.delete(tk.ANCHOR)
+    flash_card_set_list.delete(tk.ANCHOR)
 
 
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - RESTARTING -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
@@ -140,13 +144,11 @@ def restart_window():                                               #new top lev
     close_button.pack()
 
 
-# # # # # #  - CLOSES APPLICATION -
 def quit(self):
     self.destroy()
 
 
-# # # # # #  - CLOSES WINDOW AND RESTARTS FLASH DECK -
-def restart(self):
+def restart(self):                                                  #closes window and restarts flash deck
     self.destroy()
     correct_words.delete(0, END)                                    #clears correctly answered words list
     compare_list.clear()                                            #clears internal counter
@@ -162,9 +164,8 @@ def create_card():
     create.config(padx=50, pady=50, bg=BACKGROUND_COLOR)
 
     create_frame = Frame(create)
-    file_title = ''
 
-    create_ui = top_level_ui(create, create_frame, file_title, flash)
+    create_ui = top_level_ui(create, create_frame, flash)
     create_ui.create_functions(create)
 
 
@@ -180,23 +181,21 @@ def edit_list():
     edit.config(padx=50, pady=50, bg=BACKGROUND_COLOR)
     edit_frame = Frame(edit)
 #                              *  *  *  *  *  *  *  *  - INITIALIZING DICTIONARY -  *  *  *  *  *  *  *  *
-    definitions_as_text = create_dict()
-    definitions_as_dicts = json.loads(definitions_as_text)
+    definitions_as_dicts = create_dict()
     val_list = list(definitions_as_dicts.values())
     key_list = list(definitions_as_dicts.keys())
-    edit_ui = top_level_ui(edit, edit_frame, current_file_name, definitions_as_dicts)
-    edit_ui.edit_functions(edit, current_set, val_list, key_list)
+    edit_ui = top_level_ui(edit, edit_frame, definitions_as_dicts)
+    edit_ui.edit_functions(edit, current_file_name, current_set, val_list, key_list)
 
 
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - END OF TOP LEVEL FUNCTIONS -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - TOP LEVEL INTERFACE -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 class top_level_ui():
-    def __init__(self, window_name, frame_name, a_file_name, dictionary):
-        self.window_name = window_name                #root name
-        self.frame_name = frame_name
-        self.a_file_name = a_file_name
-        self.dictionary = dictionary
+    def __init__(self, window_name, frame_name, dictionary):
+        self.window_name = window_name                              #top level window name
+        self.frame_name = frame_name                                #top level frame name
+        self.dictionary = dictionary                                #empty dictionary or exisiting dictionary being edited
 
 
 #                              *  *  *  *  *  *  *  *  - CURRENT WORDS ADDED -  *  *  *  *  *  *  *  *
@@ -256,18 +255,19 @@ class top_level_ui():
         self.save_button.pack()
 
 
-    def edit_functions(self, window_name, a_current_set, a_val_list, a_key_list):
-        self.a_current_set = a_current_set
+    def edit_functions(self, window_name, a_file_name, a_current_set, a_val_list, a_key_list):
+        self.a_file_name = a_file_name                              #existing name of file
+        self.a_current_set = a_current_set                          #the current set thats been selected
         self.val_list = a_val_list
         self.key_list = a_key_list
 
 
 #                              *  *  *  *  *  *  *  *  - POPULATIIN TEXT BOXES - *  *  *  *  *  *  *  *
-        self.new_title.insert(INSERT, self.a_file_name)
+        self.new_title.insert(INSERT, self.a_file_name)             #inserts the current title of the set
         for values in a_val_list:
-            self.current_words.insert('end', values)
+            self.current_words.insert('end', values)                #adds all current words
         for keys in a_key_list:
-            self.current_definitions.insert('end', keys)
+            self.current_definitions.insert('end', keys)            #adds all current definitions
 
 
 #                              *  *  *  *  *  *  *  *  - EDIT BUTTONS - *  *  *  *  *  *  *  *
@@ -277,18 +277,18 @@ class top_level_ui():
         self.save_button.pack()
 
 
-    def word_edit_on_click(self, event):
+    def word_edit_on_click(self, event):                            #user can select word from list to edit word/definition
         selection = event.widget.curselection()
         index = selection[0]
         data = event.widget.get(index)
-        self.new_word.delete("1.0", "end")
+        self.new_word.delete("1.0", "end")                          #clears previous selection
         self.new_word.insert(INSERT, data)
-        definition = create_dict_list(self.dictionary, data)
+        definition = create_dict_list(self.dictionary, data)        #gives definition of selected word
         self.new_definition.delete("1.0", "end")
         self.new_definition.insert(INSERT, definition)
 
 
-    def word_delete(self):
+    def word_delete(self):                                          #user can delete selected entry
         cursor_selection = self.current_words.curselection()
         word = str(self.new_word.get("1.0", "end").strip())
         definition = self.new_definition.get("1.0", "end").strip()
@@ -296,7 +296,8 @@ class top_level_ui():
         self.current_definitions.delete(cursor_selection)
         del self.dictionary[definition]
 
-    def update(self):
+
+    def update(self):                                               #adds words to current word/definition box and working dictionary
         self.added_word = self.new_word.get("1.0", "end").strip()
         self.added_definition = self.new_definition.get("1.0", "end").strip()
         self.dictionary.update({self.added_definition:self.added_word})
@@ -304,6 +305,7 @@ class top_level_ui():
         self.current_definitions.insert('end', self.added_definition)
         self.new_word.delete("1.0", "end")
         self.new_definition.delete("1.0", "end")
+
 
     def add(self, method):
         if method == 'create':
@@ -317,65 +319,67 @@ class top_level_ui():
 #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - TOP LEVEL UI FUNCTIONS -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 def create_dict_list(dictionary, word):
-    val_list = list(dictionary.values())
-    key_list = list(dictionary.keys())
-    definition = key_list[val_list.index(word)]
+    val_list = list(dictionary.values())                            #creates a list of the values (word)
+    key_list = list(dictionary.keys())                              #creates a list of the keys (definitions)
+    definition = key_list[val_list.index(word)]                     #turns the dictionary into a list
     return definition
 
 
-def save(dict_name, title):
+def save(dict_name, title):                                         #saves and updates file with user inputted file name and closes window
     file_name = str(title.get("1.0", "end").strip())+".txt"
     with open(file_name, 'w') as f:
         json.dump(dict_name, f)
-        word_box.delete(tk.ANCHOR)
-        word_box.insert('end', file_name)
+        flash_card_set_list.delete(tk.ANCHOR)
+        flash_card_set_list.insert('end', file_name)
+
+
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - END OF TOP LEVEL UI FUNCTIONS -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - DISPLAY -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
-# # # # # #  - FLASH CARD SETS -
-word_box.pack(side = LEFT)
+#  *  *  *  *  *  *  *  *  - FLASH CARD SETS -  *  *  *  *  *  *  *  *
+flash_card_set_list.pack(side = LEFT)
 frame.pack(padx = 30, pady = 30)
 
 
-# # # # # #  - CORRECT WORDS -
+#  *  *  *  *  *  *  *  *  - CORRECT WORDS -  *  *  *  *  *  *  *  *
 correct_words.pack(side=RIGHT)
 frame.pack(padx=30, pady=30)
 
 
-# # # # # #  - CURRENT WORD -
-displayed_word = Text(window, wrap=WORD, height = 5, width = 20, bg = 'light yellow')
+#  *  *  *  *  *  *  *  *  - CURRENT WORDS -  *  *  *  *  *  *  *  *
+displayed_word = Text(window, wrap=WORD, state='normal', height = 5, width = 20, bg = 'light yellow')
 displayed_word.pack(fill="none", expand=TRUE)
 
 
-# # # # # #  - HIDDEN ANSWER -
-correct_definition = Text(window, wrap=WORD, height = 5, width = 100, bg = 'light green')
+#  *  *  *  *  *  *  *  *  - HIDDEN ANSWER -  *  *  *  *  *  *  *  *
+correct_definition = Text(window, wrap=WORD, state='normal', height = 5, width = 100, bg = 'light green')
 if show == True:
     correct_definition.pack(fill="none", expand=TRUE)
 
 
-# # # # # #  - USER INPUT -
-input_definition = Text(window, wrap=WORD, height = 5, width = 100, bg = 'light cyan')
+#  *  *  *  *  *  *  *  *  - USER INPUT -  *  *  *  *  *  *  *  *
+input_definition = Text(window, wrap=WORD, state='normal', height = 5, width = 100, bg = 'light cyan')
 input_definition.pack(fill="none", expand=TRUE)
+
+
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - END OF DISPLAY -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - BUTTONS -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
-
-# # # # # #  - DELETE BUTTON -
+#  *  *  *  *  *  *  *  *  - DELETE SELECTED SET -  *  *  *  *  *  *  *  *
 delete_button = Button(frame, text = 'Delete set', command=confirm_delete)
 delete_button.pack(side = BOTTOM , padx = 5)
 
-# # # # # #  - CREATE BUTTON -
+#  *  *  *  *  *  *  *  *  - CREATE NEW SET -  *  *  *  *  *  *  *  *
 create_button = Button(frame, text = 'Create set', command=create_card)
 create_button.pack(side = BOTTOM , padx = 5)
 
-# # # # # #  - EDIT BUTTON -
-select_button = Button(frame, text = 'Edit', command=edit_list)
-select_button.pack(side = BOTTOM , padx = 5)
+#  *  *  *  *  *  *  *  *  - EDIT SELECTED SET -  *  *  *  *  *  *  *  *
+edit_button = Button(frame, text = 'Edit', command=edit_list)
+edit_button.pack(side = BOTTOM , padx = 5)
 
-# # # # # #  - SELECT BUTTON -
+#  *  *  *  *  *  *  *  *  - SELECT A FLASH SET -  *  *  *  *  *  *  *  *
 select_button = Button(frame, text = 'Select set', command=show_word)
 select_button.pack(side = BOTTOM , padx = 5)
-
 
 
 # # # # # #  - CHECK ANSWER BUTTON -
@@ -386,6 +390,8 @@ answer_button.pack()
 # # # # # #  - NEXY WORD BUTTON -
 next_word = Button(window, height = 2,width = 20,text ="Next word", command=lambda: [clear(), hide_definition(correct_definition)])
 next_word.pack()
+
+
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - END OF BUTTONS -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #
 
