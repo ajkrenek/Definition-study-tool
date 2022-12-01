@@ -72,6 +72,7 @@ def show_word():
 
 def show_definition(widget):
     global compare_list
+    answer_button.configure(state='disabled')
     widget.pack()                                                   #unhides the correct definition text box widget
     real_definition = temp_list[1]
     answer = input_definition.get("1.0", "end").strip()             #strips user input to get raw input
@@ -91,7 +92,7 @@ def show_definition(widget):
 
 def hide_definition(widget):                                        #hides the display when generating the next word
     global show
-
+    answer_button.configure(state='normal')
     show = False
     widget.pack_forget()
 
@@ -383,7 +384,7 @@ select_button.pack(side = BOTTOM , padx = 5)
 
 
 # # # # # #  - CHECK ANSWER BUTTON -
-answer_button = Button(window, height = 2,width = 20,text ="Check answer", command=lambda: show_definition(correct_definition))
+answer_button = Button(window, height = 2, width = 20, state='normal', text ="Check answer", command=lambda: show_definition(correct_definition))
 answer_button.pack()
 
 
