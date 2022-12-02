@@ -24,9 +24,11 @@ compare_list = []
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - MAIN FUNCTIONS -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 def list_select():
     if flash_card_set_list.curselection() != ():
+        displayed_word.configure(state='normal')
         displayed_word.delete("1.0", "end")
         word_list = flash_card_set_list.get(flash_card_set_list.curselection())           #file select based on user click
     return word_list
+
 
 def create_dict():
     word_list = list_select()
@@ -70,8 +72,10 @@ def show_word():
     displayed_word.insert(INSERT, word)                             #displays word on screen
     displayed_word.configure(state='disabled')
 
+
 def show_definition(widget):
     global compare_list
+    input_definition.bind('<Return>', lambda event:[clear(), hide_definition(correct_definition)])
     answer_button.configure(state='disabled')
     widget.pack()                                                   #unhides the correct definition text box widget
     real_definition = temp_list[1]
@@ -79,7 +83,7 @@ def show_definition(widget):
     the_answer = f"The correct answer is: {real_definition}"
     input_definition.configure(state='disabled')
 
-    if  answer == real_definition:
+    if  answer.upper() == real_definition.upper():
         correct_words.insert('end', real_definition)                #adds correctly answered words into a list for user to see progress
         compare_list.append(answer)                                 #adds list to internal counter
         correct_definition.insert(INSERT, 'Correct!')               #display 'correct!' to user
@@ -93,6 +97,7 @@ def show_definition(widget):
 def hide_definition(widget):                                        #hides the display when generating the next word
     global show
     answer_button.configure(state='normal')
+    input_definition.bind('<Return>', lambda event:[show_definition(correct_definition)])
     show = False
     widget.pack_forget()
 
@@ -112,18 +117,18 @@ def clear():                                                        #resets all 
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - DELETING A SET -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 def confirm_delete():
     delete = Toplevel(window)
-    delete.geometry("500x200")
-    delete.title("Delete ?")
-
+    delete.title("Delete?")
+    delete.config(bg=BACKGROUND_COLOR)
     current_set = list_select()
     current_file_name = current_set.strip('.txt')
 
-    Label(delete, text=f"Are you sure you want to delete {current_file_name}?").place(x=100,y=100)
-
+    delete_label = Label(delete, text=f"Are you sure you want to delete {current_file_name}?")
+    delete_label.config(bg=BACKGROUND_COLOR)
+    delete_label.grid(row=1, column=5)
     yes_button = tk.Button(delete, height = 2,width = 20,text ="Yes", command=lambda: [delete_list(current_set), quit(delete)])
-    yes_button.pack()
+    yes_button.grid(row=4, column=5, pady=5)
     no_button = tk.Button(delete, height = 2,width = 20,text ="No", command=lambda: quit(delete))
-    no_button.pack()
+    no_button.grid(row=5, column=5, pady=5)
 
 
 def delete_list(current_set):
@@ -134,22 +139,26 @@ def delete_list(current_set):
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - RESTARTING -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 def restart_window():                                               #new top level window asking to restart
     top = Toplevel(window)
-    top.geometry("500x200")
+    top.config(bg=BACKGROUND_COLOR)
     top.title("Restart?")
-    Label(top, text="Congrats! You got everything right! Would you like to restart?").place(x=100,y=100)
-
-    restart_button = tk.Button(top, height = 2,width = 20,text ="Restart", command=lambda: restart(top))
-    restart_button.pack()
+    next_word.configure(state='disabled')
+    answer_button.configure(state='disabled')
+    restart_label = Label(top, text="Congrats! You got everything right! Would you like to restart?")
+    restart_label.grid(row=1, column=5)
+    restart_label.config(bg=BACKGROUND_COLOR)
+    restart_button = tk.Button(top, height = 2, width = 20, text ="Restart", command=lambda: restart(top))
+    restart_button.grid(row=5, column=5, pady=5)
 
     close_button = Button(top, height = 2,width = 20,text ="Close", command=lambda: quit(window))
-    close_button.pack()
-
+    close_button.grid(row=6, column=5, pady=5)
 
 def quit(self):
     self.destroy()
 
 
 def restart(self):                                                  #closes window and restarts flash deck
+    next_word.configure(state='normal')
+    answer_button.configure(state='normal')
     self.destroy()
     correct_words.delete(0, END)                                    #clears correctly answered words list
     compare_list.clear()                                            #clears internal counter
@@ -164,9 +173,7 @@ def create_card():
     create.title("Flash Card Creator")
     create.config(padx=50, pady=50, bg=BACKGROUND_COLOR)
 
-    create_frame = Frame(create)
-
-    create_ui = top_level_ui(create, create_frame, flash)
+    create_ui = top_level_ui(create, flash)
     create_ui.create_functions(create)
 
 
@@ -180,12 +187,11 @@ def edit_list():
     edit = Toplevel(window)
     edit.title("Flash Card Editor")
     edit.config(padx=50, pady=50, bg=BACKGROUND_COLOR)
-    edit_frame = Frame(edit)
 #                              *  *  *  *  *  *  *  *  - INITIALIZING DICTIONARY -  *  *  *  *  *  *  *  *
     definitions_as_dicts = create_dict()
     val_list = list(definitions_as_dicts.values())
     key_list = list(definitions_as_dicts.keys())
-    edit_ui = top_level_ui(edit, edit_frame, definitions_as_dicts)
+    edit_ui = top_level_ui(edit, definitions_as_dicts)
     edit_ui.edit_functions(edit, current_file_name, current_set, val_list, key_list)
 
 
@@ -193,67 +199,68 @@ def edit_list():
 #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - TOP LEVEL INTERFACE -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 class top_level_ui():
-    def __init__(self, window_name, frame_name, dictionary):
+    def __init__(self, window_name, dictionary):
         self.window_name = window_name                              #top level window name
-        self.frame_name = frame_name                                #top level frame name
         self.dictionary = dictionary                                #empty dictionary or exisiting dictionary being edited
 
 
 #                              *  *  *  *  *  *  *  *  - CURRENT WORDS ADDED -  *  *  *  *  *  *  *  *
-        self.current_words = Label(frame_name, text="Current Words")
-        self.current_words.pack(side=TOP)
+        self.current_words = Label(window_name, text="Current Words")
+        self.current_words.config(bg=BACKGROUND_COLOR)
+        self.current_words.grid(row=6, column=1)
 
-        self.current_words = Listbox(frame_name)
-        self.current_words.pack(side = LEFT, expand=True)
+        self.current_words = Listbox(window_name)
+        self.current_words.grid(row=7, column=1)
 
 
 #                              *  *  *  *  *  *  *  *  - CURRENT DEFINITIONS ADDED -  *  *  *  *  *  *  *  *
-        self.current_definitions = Label(frame_name, text="Current Definitions")
-        self.current_definitions.pack(side=TOP)
+        self.current_definitions = Label(window_name, text="Current Definitions")
+        self.current_definitions.config(bg=BACKGROUND_COLOR)
+        self.current_definitions.grid(row=6, column=2)
 
-        self.current_definitions = Listbox(frame_name)
-        self.current_definitions.pack(side = TOP, expand=True)
-
-        frame_name.pack(side=LEFT)
+        self.current_definitions = Listbox(window_name)
+        self.current_definitions.grid(row=7, column=2)
 
 
 #                              *  *  *  *  *  *  *  *  - ADD NEW Title -  *  *  *  *  *  *  *  *
         self.new_title_label = Label(window_name, text="Enter new title")
-        self.new_title_label.pack(padx=0, pady=5)
+        self.new_title_label.config(bg=BACKGROUND_COLOR)
+        self.new_title_label.grid(row=2, column=4)
 
         self.new_title = Text(window_name, wrap=WORD, height = 1, width = 20, bg = 'light pink')
-        self.new_title.pack(fill="none", expand=TRUE)
+        self.new_title.grid(row=3, column=4)
 
 
 #                              *  *  *  *  *  *  *  *  - ADD NEW WORD -   *  *  *  *  *  *  *  *  *
         self.new_word_label = Label(window_name, text="Enter a new word")
-        self.new_word_label.pack(padx=0, pady=5)
+        self.new_word_label.config(bg=BACKGROUND_COLOR)
+        self.new_word_label.grid(row=4, column=4)
 
         self.new_word = Text(window_name, wrap=WORD, height = 1, width = 20, bg = 'light yellow')
-        self.new_word.pack(fill="none", expand=TRUE)
+        self.new_word.grid(row=5, column=4)
 
 
 #                               *  *  *  *  *  *  *  *  - ADDING NEW DEFINITION -  *  *  *  *  *  *  *  *
         self.new_definition_label = Label(window_name, text="Enter a new definition")
-        self.new_definition_label.pack(padx=10, pady=5)
+        self.new_definition_label.config(bg=BACKGROUND_COLOR)
+        self.new_definition_label.grid(row=6, column=4)
 
-        self.new_definition = Text(window_name, wrap=WORD, height = 5, width = 100, bg = 'light blue')
-        self.new_definition.pack(fill="none", expand=TRUE)
+        self.new_definition = Text(window_name, wrap=WORD, height = 10, width = 50, bg = 'light blue')
+        self.new_definition.grid(row=7, column=4)
 
         self.delete_set = tk.Button(window_name, height = 2,width = 20,text ="Delete selection", command=lambda: self.word_delete())
-        self.delete_set.pack()
+        self.delete_set.grid(row=8, column=1)
 
         self.current_words.bind('<<ListboxSelect>>', self.word_edit_on_click)
 
 
     def create_functions(self, window_name):
-
 #                              *  *  *  *  *  *  *  *  - CREATE BUTTONS - *  *  *  *  *  *  *  *
         self.add_button = tk.Button(window_name, height = 2,width = 20,text ="Add card", command=lambda: self.add('create'))
-        self.add_button.pack()
+        self.add_button.grid(row=8, column=4)
 
         self.save_button = tk.Button(window_name, height = 2,width = 20,text ="Save set", command=lambda: [save(self.dictionary, self.new_title), quit(window_name), list_select()])
-        self.save_button.pack()
+        self.save_button.grid(row=8, column=2)
 
 
     def edit_functions(self, window_name, a_file_name, a_current_set, a_val_list, a_key_list):
@@ -273,9 +280,9 @@ class top_level_ui():
 
 #                              *  *  *  *  *  *  *  *  - EDIT BUTTONS - *  *  *  *  *  *  *  *
         self.add_button = tk.Button(window_name, height = 2,width = 20,text ="Add card", command=lambda: self.add('edit'))
-        self.add_button.pack()
+        self.add_button.grid(row=8, column=4)
         self.save_button = tk.Button(window_name, height = 2,width = 20,text ="save set", command=lambda: [save(self.dictionary, self.new_title), quit(window_name), list_select()])
-        self.save_button.pack()
+        self.save_button.grid(row=8, column=2)
 
 
     def word_edit_on_click(self, event):                            #user can select word from list to edit word/definition
@@ -361,6 +368,7 @@ if show == True:
 #  *  *  *  *  *  *  *  *  - USER INPUT -  *  *  *  *  *  *  *  *
 input_definition = Text(window, wrap=WORD, state='normal', height = 5, width = 100, bg = 'light cyan')
 input_definition.pack(fill="none", expand=TRUE)
+input_definition.bind('<Return>', lambda event:show_definition(correct_definition))
 
 
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - END OF DISPLAY -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
@@ -368,29 +376,29 @@ input_definition.pack(fill="none", expand=TRUE)
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - BUTTONS -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 #  *  *  *  *  *  *  *  *  - DELETE SELECTED SET -  *  *  *  *  *  *  *  *
 delete_button = Button(frame, text = 'Delete set', command=confirm_delete)
-delete_button.pack(side = BOTTOM , padx = 5)
+delete_button.pack(side = BOTTOM , padx = 5, pady = 5)
 
 #  *  *  *  *  *  *  *  *  - CREATE NEW SET -  *  *  *  *  *  *  *  *
 create_button = Button(frame, text = 'Create set', command=create_card)
-create_button.pack(side = BOTTOM , padx = 5)
-
-#  *  *  *  *  *  *  *  *  - EDIT SELECTED SET -  *  *  *  *  *  *  *  *
-edit_button = Button(frame, text = 'Edit', command=edit_list)
-edit_button.pack(side = BOTTOM , padx = 5)
+create_button.pack(side = BOTTOM , padx = 5, pady = 10)
 
 #  *  *  *  *  *  *  *  *  - SELECT A FLASH SET -  *  *  *  *  *  *  *  *
 select_button = Button(frame, text = 'Select set', command=show_word)
-select_button.pack(side = BOTTOM , padx = 5)
+select_button.pack(side = TOP , padx = 5, pady = 5)
+
+#  *  *  *  *  *  *  *  *  - EDIT SELECTED SET -  *  *  *  *  *  *  *  *
+edit_button = Button(frame, text = 'Edit set', command=edit_list)
+edit_button.pack(side = TOP , padx = 5, pady = 10)
 
 
 # # # # # #  - CHECK ANSWER BUTTON -
 answer_button = Button(window, height = 2, width = 20, state='normal', text ="Check answer", command=lambda: show_definition(correct_definition))
-answer_button.pack()
+answer_button.pack(side = LEFT)
 
 
 # # # # # #  - NEXY WORD BUTTON -
 next_word = Button(window, height = 2,width = 20,text ="Next word", command=lambda: [clear(), hide_definition(correct_definition)])
-next_word.pack()
+next_word.pack(side = RIGHT)
 
 
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - END OF BUTTONS -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
