@@ -13,31 +13,36 @@ frame = Frame(window)
 flash_card_set_list = Listbox(frame)
 correct_words = Listbox(frame)
 
-for name in glob.glob('*.txt'):                                     #displays all text files in same directory
+for name in glob.glob('*.txt'):                                     #displays all file names in same directory
     flash_card_set_list.insert('end', name.strip('.txt'))
 
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - GLOBAL VARIABLES  -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 show = False                                                        #hides correct answer
 temp_list = []                                                      #temp list to store random word and definition
 compare_list = []                                                   #list to compare correct words to remaining words
-selected_list = []                                                  #selected word list
+sel_list_file_name = ""                                             #current file name
+sel_list_name = ""                                                  #current flash card set name
 selected_dic = {}                                                   #selected dictionary
 selected_dic_val_list = []                                          #values of selected dictionary
 selected_dic_key_list = []                                          #keys of selected dictionary
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - MAIN FUNCTIONS -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 def list_select():
-    global selected_list, selected_dic
+    global selected_dic, sel_list_file_name, sel_list_name,compare_list
     if flash_card_set_list.curselection() != ():
         displayed_word.configure(state='normal')
         displayed_word.delete("1.0", "end")
         word_list = flash_card_set_list.get(flash_card_set_list.curselection())           #file select based on user click
-        selected_list.clear()
-        selected_list.append(f"{word_list}.txt")
+        correct_words.delete(0, END)                                                      #clears correctly answered words list
+        compare_list.clear()
+        sel_list_file_name = ""                                                           #clears previous selection
+        sel_list_name = ""
+        sel_list_file_name = sel_list_file_name + f"{word_list}.txt"
+        sel_list_name = word_list
 
 
 def create_dict():
-    global selected_list, selected_dic, selected_dic_val_list, selected_dic_key_list
-    with open(selected_list[0]) as f:
+    global sel_list_file_name, selected_dic, selected_dic_val_list, selected_dic_key_list
+    with open(sel_list_file_name) as f:
         definitions_as_text = f.read()
         definitions_as_dicts = json.loads(definitions_as_text)  #opens and converts text to a dictionary
         selected_dic_key_list.clear()
@@ -50,6 +55,7 @@ def create_dict():
             selected_dic_val_list.append(values)
         for keys in list(definitions_as_dicts.keys()):
             selected_dic_key_list.append(keys)
+
 
 def generate_random_word():
     global temp_list, compare_list, selected_dic, selected_dic_key_list, selected_dic_val_list
@@ -69,6 +75,8 @@ def generate_random_word():
         temp_list.clear()
         temp_list.append(word)
         temp_list.append(real_definition)
+
+
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - END OF MAIN FUNCTIONS -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - SECONDARY FUNCTIONS -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
@@ -85,12 +93,12 @@ def show_definition(widget):
     answer_button.configure(state='disabled')
     widget.pack()                                                   #unhides the correct definition text box widget
     real_definition = temp_list[1]
-    answer = input_definition.get("1.0", "end").strip().lower()             #strips user input to get raw input
+    answer = input_definition.get("1.0", "end").strip().lower()     #strips user input to get raw input
     the_answer = f"The correct answer is: {real_definition}"
     input_definition.configure(state='disabled')
 
     if  answer == real_definition.lower():
-        correct_words.insert('end', real_definition)                #adds correctly answered words into a list for user to see progress
+        correct_words.insert('end', temp_list[0])                   #adds correctly answered words into a list for user to see progress
         compare_list.append(answer)                                 #adds list to internal counter
         correct_definition.insert(INSERT, 'Correct!')               #display 'correct!' to user
         correct_definition.configure(state='disabled')
@@ -126,17 +134,17 @@ def confirm_delete():
     delete.title("Delete?")
     delete.config(bg=BACKGROUND_COLOR)
 
-    delete_label = Label(delete, text=f"Are you sure you want to delete {selected_list[0].strip('.txt')}?")
+    delete_label = Label(delete, text=f"Are you sure you want to delete {sel_list_name}?")
     delete_label.config(bg=BACKGROUND_COLOR)
     delete_label.grid(row=1, column=5)
-    yes_button = tk.Button(delete, height = 2,width = 20,text ="Yes", command=lambda: [delete_list(selected_list[0]), quit(delete)])
+    yes_button = tk.Button(delete, height = 2,width = 20,text ="Yes", command=lambda: [delete_list(sel_list_file_name), quit(delete)])
     yes_button.grid(row=4, column=5, pady=5)
     no_button = tk.Button(delete, height = 2,width = 20,text ="No", command=lambda: quit(delete))
     no_button.grid(row=5, column=5, pady=5)
 
 
-def delete_list(selected_list):
-    os.remove(selected_list)
+def delete_list(sel_list_file_name):
+    os.remove(sel_list_file_name)
     flash_card_set_list.delete(tk.ANCHOR)
 
 
@@ -183,8 +191,7 @@ def create_card():
 
 def edit_list():
 #                              *  *  *  *  *  *  *  *  - SELECTING FILE -  *  *  *  *  *  *  *  *
-    global selected_list
-    current_file_name = selected_list[0].strip('.txt')
+    global sel_list_file_name, sel_list_name
 #                              *  *  *  *  *  *  *  *  - CREATING EDIT WINDOW -  *  *  *  *  *  *  *  *
     edit = Toplevel(window)
     edit.title("Flash Card Editor")
@@ -192,7 +199,7 @@ def edit_list():
 #                              *  *  *  *  *  *  *  *  - INITIALIZING DICTIONARY -  *  *  *  *  *  *  *  *
     #definitions_as_dicts = create_dict()
     edit_ui = top_level_ui(edit, selected_dic)
-    edit_ui.edit_functions(edit, current_file_name, selected_list[0], selected_dic_val_list, selected_dic_key_list)
+    edit_ui.edit_functions(edit, sel_list_name, sel_list_file_name, selected_dic_val_list, selected_dic_key_list)
 
 
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - END OF TOP LEVEL FUNCTIONS -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
@@ -259,7 +266,7 @@ class top_level_ui():
         self.add_button = tk.Button(window_name, height = 2,width = 20,text ="Add card", command=lambda: self.add('create'))
         self.add_button.grid(row=8, column=4)
 
-        self.save_button = tk.Button(window_name, height = 2,width = 20,text ="Save set", command=lambda: [save(self.dictionary, self.new_title), quit(window_name), list_select()])
+        self.save_button = tk.Button(window_name, height = 2,width = 20,text ="Save set", command=lambda: [save(self.dictionary, self.new_title, 'create'), quit(window_name), list_select()])
         self.save_button.grid(row=8, column=2)
 
 
@@ -281,7 +288,7 @@ class top_level_ui():
 #                              *  *  *  *  *  *  *  *  - EDIT BUTTONS - *  *  *  *  *  *  *  *
         self.add_button = tk.Button(window_name, height = 2,width = 20,text ="Add card", command=lambda: self.add('edit'))
         self.add_button.grid(row=8, column=4)
-        self.save_button = tk.Button(window_name, height = 2,width = 20,text ="save set", command=lambda: [save(self.dictionary, self.new_title), quit(window_name), list_select()])
+        self.save_button = tk.Button(window_name, height = 2,width = 20,text ="save set", command=lambda: [save(self.dictionary, self.new_title, 'edit'), quit(window_name), list_select()])
         self.save_button.grid(row=8, column=2)
 
 
@@ -333,11 +340,12 @@ def create_dict_list(dictionary, word):
     return definition
 
 
-def save(dict_name, title):                                         #saves and updates file with user inputted file name and closes window
+def save(dict_name, title, method):                                         #saves and updates file with user inputted file name and closes window
     file_name = str(title.get("1.0", "end").strip())+".txt"
     with open(file_name, 'w') as f:
         json.dump(dict_name, f)
-        flash_card_set_list.delete(tk.ANCHOR)
+        if method == 'edit':
+            flash_card_set_list.delete(tk.ANCHOR)
         flash_card_set_list.insert('end', file_name.strip('.txt'))
 
 
@@ -391,12 +399,12 @@ edit_button = Button(frame, text = 'Edit set', command=lambda: [list_select(), c
 edit_button.pack(side = TOP , padx = 5, pady = 10)
 
 
-# # # # # #  - CHECK ANSWER BUTTON -
+#  *  *  *  *  *  *  *  *  - CHECK ANSWER -  *  *  *  *  *  *  *  *
 answer_button = Button(window, height = 2, width = 20, state='normal', text ="Check answer", command=lambda: show_definition(correct_definition))
 answer_button.pack(side = LEFT)
 
 
-# # # # # #  - NEXY WORD BUTTON -
+#  *  *  *  *  *  *  *  *  - NEXT WORD -  *  *  *  *  *  *  *  *
 next_word = Button(window, height = 2,width = 20,text ="Next word", command=lambda: [clear(), hide_definition(correct_definition)])
 next_word.pack(side = RIGHT)
 
