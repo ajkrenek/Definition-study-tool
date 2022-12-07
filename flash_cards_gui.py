@@ -2,7 +2,7 @@ from tkinter import *
 from tkinter import ttk
 import tkinter as tk
 import tkinter.messagebox as box
-import glob, os, json, random
+import json, random, sqlite3
 
 BACKGROUND_COLOR = "#B1DDC6"
 window = Tk()
@@ -13,49 +13,50 @@ frame = Frame(window)
 flash_card_set_list = Listbox(frame)
 correct_words = Listbox(frame)
 
-for name in glob.glob('*.txt'):                                     #displays all file names in same directory
-    flash_card_set_list.insert('end', name.strip('.txt'))
+connection = sqlite3.connect("flash_cards.db")
+cursor = connection.cursor()
+#cursor.execute("""CREATE TABLE IF NOT EXISTS flash_cards(title TEXT PRIMARY KEY NOT NULL, flash_dict VARIANT NOT NULL, flash_compare_list VARIANT NOT NULL);""")
+
+flash_card_titles = cursor.execute('SELECT title FROM flash_cards').fetchall()
+for flash_titles in flash_card_titles:
+    flash_card_set_list.insert('end', flash_titles[0])
 
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - GLOBAL VARIABLES  -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 show = False                                                        #hides correct answer
 temp_list = []                                                      #temp list to store random word and definition
 compare_list = []                                                   #list to compare correct words to remaining words
-sel_list_file_name = ""                                             #current file name
 sel_list_name = ""                                                  #current flash card set name
 selected_dic = {}                                                   #selected dictionary
 selected_dic_val_list = []                                          #values of selected dictionary
 selected_dic_key_list = []                                          #keys of selected dictionary
+
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - MAIN FUNCTIONS -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 def list_select():
-    global selected_dic, sel_list_file_name, sel_list_name,compare_list
+    global selected_dic, sel_list_name,compare_list
     if flash_card_set_list.curselection() != ():
         displayed_word.configure(state='normal')
         displayed_word.delete("1.0", "end")
         word_list = flash_card_set_list.get(flash_card_set_list.curselection())           #file select based on user click
         correct_words.delete(0, END)                                                      #clears correctly answered words list
         compare_list.clear()
-        sel_list_file_name = ""                                                           #clears previous selection
+
+        #db stuff
+        rows = cursor.execute('SELECT title, flash_dict FROM flash_cards WHERE title = ?', (word_list,)).fetchall()
         sel_list_name = ""
-        sel_list_file_name = sel_list_file_name + f"{word_list}.txt"
-        sel_list_name = word_list
+        selected_dic.clear()
+        sel_list_name = sel_list_name + str(rows[0][0])
+        db_dict_as_dict = json.loads(rows[0][1])
+        selected_dic.update(db_dict_as_dict)
 
 
 def create_dict():
-    global sel_list_file_name, selected_dic, selected_dic_val_list, selected_dic_key_list
-    with open(sel_list_file_name) as f:
-        definitions_as_text = f.read()
-        definitions_as_dicts = json.loads(definitions_as_text)  #opens and converts text to a dictionary
-        selected_dic_key_list.clear()
-        selected_dic_val_list.clear()
-        selected_dic.clear()
-
-        selected_dic.update(definitions_as_dicts)
-
-        for values in list(definitions_as_dicts.values()):
-            selected_dic_val_list.append(values)
-        for keys in list(definitions_as_dicts.keys()):
-            selected_dic_key_list.append(keys)
-
+    global selected_dic, selected_dic_val_list, selected_dic_key_list
+    selected_dic_key_list.clear()
+    selected_dic_val_list.clear()
+    for values in list(selected_dic.values()):
+        selected_dic_val_list.append(values)
+    for keys in list(selected_dic.keys()):
+        selected_dic_key_list.append(keys)
 
 def generate_random_word():
     global temp_list, compare_list, selected_dic, selected_dic_key_list, selected_dic_val_list
@@ -137,14 +138,15 @@ def confirm_delete():
     delete_label = Label(delete, text=f"Are you sure you want to delete {sel_list_name}?")
     delete_label.config(bg=BACKGROUND_COLOR)
     delete_label.grid(row=1, column=5)
-    yes_button = tk.Button(delete, height = 2,width = 20,text ="Yes", command=lambda: [delete_list(sel_list_file_name), quit(delete)])
+    yes_button = tk.Button(delete, height = 2,width = 20,text ="Yes", command=lambda: [delete_list(sel_list_name), quit(delete)])
     yes_button.grid(row=4, column=5, pady=5)
     no_button = tk.Button(delete, height = 2,width = 20,text ="No", command=lambda: quit(delete))
     no_button.grid(row=5, column=5, pady=5)
 
 
-def delete_list(sel_list_file_name):
-    os.remove(sel_list_file_name)
+def delete_list(sel_list_name):
+    cursor.execute("DELETE FROM flash_cards WHERE title = ?",(sel_list_name,))
+    connection.commit()
     flash_card_set_list.delete(tk.ANCHOR)
 
 
@@ -191,7 +193,7 @@ def create_card():
 
 def edit_list():
 #                              *  *  *  *  *  *  *  *  - SELECTING FILE -  *  *  *  *  *  *  *  *
-    global sel_list_file_name, sel_list_name
+    global sel_list_name, selected_dic_key_list, selected_dic_val_list
 #                              *  *  *  *  *  *  *  *  - CREATING EDIT WINDOW -  *  *  *  *  *  *  *  *
     edit = Toplevel(window)
     edit.title("Flash Card Editor")
@@ -199,8 +201,9 @@ def edit_list():
 #                              *  *  *  *  *  *  *  *  - INITIALIZING DICTIONARY -  *  *  *  *  *  *  *  *
     #definitions_as_dicts = create_dict()
     edit_ui = top_level_ui(edit, selected_dic)
-    edit_ui.edit_functions(edit, sel_list_name, sel_list_file_name, selected_dic_val_list, selected_dic_key_list)
-
+    edit_ui.edit_functions(edit, sel_list_name, selected_dic_val_list, selected_dic_key_list)
+    print(selected_dic_key_list)
+    print(selected_dic_val_list)
 
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - END OF TOP LEVEL FUNCTIONS -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #
@@ -266,19 +269,18 @@ class top_level_ui():
         self.add_button = tk.Button(window_name, height = 2,width = 20,text ="Add card", command=lambda: self.add('create'))
         self.add_button.grid(row=8, column=4)
 
-        self.save_button = tk.Button(window_name, height = 2,width = 20,text ="Save set", command=lambda: [save(self.dictionary, self.new_title, 'create'), quit(window_name), list_select()])
+        self.save_button = tk.Button(window_name, height = 2,width = 20,text ="Save set", command=lambda: [save(self.dictionary, self.new_title), quit(window_name), list_select()])
         self.save_button.grid(row=8, column=2)
 
 
-    def edit_functions(self, window_name, a_file_name, a_current_set, a_val_list, a_key_list):
-        self.a_file_name = a_file_name                              #existing name of file
+    def edit_functions(self, window_name, a_current_set, a_val_list, a_key_list):
         self.a_current_set = a_current_set                          #the current set thats been selected
         self.val_list = a_val_list
         self.key_list = a_key_list
 
 
 #                              *  *  *  *  *  *  *  *  - POPULATIIN TEXT BOXES - *  *  *  *  *  *  *  *
-        self.new_title.insert(INSERT, self.a_file_name)             #inserts the current title of the set
+        self.new_title.insert(INSERT, self.a_current_set)             #inserts the current title of the set
         for values in a_val_list:
             self.current_words.insert('end', values)                #adds all current words
         for keys in a_key_list:
@@ -288,7 +290,7 @@ class top_level_ui():
 #                              *  *  *  *  *  *  *  *  - EDIT BUTTONS - *  *  *  *  *  *  *  *
         self.add_button = tk.Button(window_name, height = 2,width = 20,text ="Add card", command=lambda: self.add('edit'))
         self.add_button.grid(row=8, column=4)
-        self.save_button = tk.Button(window_name, height = 2,width = 20,text ="save set", command=lambda: [save(self.dictionary, self.new_title, 'edit'), quit(window_name), list_select()])
+        self.save_button = tk.Button(window_name, height = 2,width = 20,text ="save set", command=lambda: [edit_save(self.dictionary, self.new_title), quit(window_name), list_select()])
         self.save_button.grid(row=8, column=2)
 
 
@@ -340,14 +342,23 @@ def create_dict_list(dictionary, word):
     return definition
 
 
-def save(dict_name, title, method):                                         #saves and updates file with user inputted file name and closes window
-    file_name = str(title.get("1.0", "end").strip())+".txt"
-    with open(file_name, 'w') as f:
-        json.dump(dict_name, f)
-        if method == 'edit':
-            flash_card_set_list.delete(tk.ANCHOR)
-        flash_card_set_list.insert('end', file_name.strip('.txt'))
+def save(dict_name, title):                                         #saves and updates file with user inputted file name and closes window
+    set_name = str(title.get("1.0", "end").strip())
+    new_dict = json.dumps(dict_name)
 
+    cursor.execute(f"""INSERT INTO flash_cards(title, flash_dict)VALUES(?,?)""", (set_name, new_dict,)) # passing a dictionary and not a string
+    connection.commit()
+
+    flash_card_set_list.insert('end', set_name)
+
+def edit_save(dict_name, title):
+    set_name = str(title.get("1.0", "end").strip())
+    new_dict = json.dumps(dict_name)
+    cursor.execute("DELETE FROM flash_cards WHERE title = ?",(set_name,))
+    cursor.execute(f"""INSERT INTO flash_cards(title, flash_dict)VALUES(?,?)""", (set_name, new_dict,)) # passing a dictionary and not a string
+    connection.commit()
+    flash_card_set_list.delete(tk.ANCHOR)
+    flash_card_set_list.insert('end', set_name)
 
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - END OF TOP LEVEL UI FUNCTIONS -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #
