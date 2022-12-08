@@ -14,65 +14,81 @@ flash_card_set_list = Listbox(frame)
 
 correct_words = Listbox(frame)
 words_to_study_box = Listbox(frame)
+
+
 connection = sqlite3.connect("flash_cards.db")
 cursor = connection.cursor()
+
+#creates new database with 4 columns to store set title, dictionary, compare list, and words to study list
 #cursor.execute("""CREATE TABLE IF NOT EXISTS flash_cards(title TEXT PRIMARY KEY NOT NULL, flash_dict VARIANT NOT NULL, flash_compare_list VARIANT NOT NULL, flash_study_list VARIANT NOT NULL);""")
 
-flash_card_titles = cursor.execute('SELECT title FROM flash_cards').fetchall()
+
+flash_card_titles = cursor.execute('SELECT title FROM flash_cards').fetchall() #displays all flash set titles in the database
 for flash_titles in flash_card_titles:
     flash_card_set_list.insert('end', flash_titles[0])
 
+
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - GLOBAL VARIABLES  -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 show = False                                                        #hides correct answer
-word_study = False
+word_study = False                                                  #tells program a restart has occured
 temp_list = []                                                      #temp list to store random word and definition
 compare_list = []                                                   #list to compare correct words to remaining words
-words_to_study = []
+words_to_study = []                                                 #list of wrong words to study
 sel_list_name = ""                                                  #current flash card set name
 selected_dic = {}                                                   #selected dictionary
 selected_dic_val_list = []                                          #values of selected dictionary
 selected_dic_key_list = []                                          #keys of selected dictionary
-
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - MAIN FUNCTIONS -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 def list_select():
-    global selected_dic, sel_list_name, compare_list
+    global selected_dic, sel_list_name, compare_list, words_to_study
     if flash_card_set_list.curselection() != ():
+
         displayed_word.configure(state='normal')
         displayed_word.delete("1.0", "end")
-        word_list = flash_card_set_list.get(flash_card_set_list.curselection())           #file select based on user click
-        correct_words.delete(0, END)                                                      #clears correctly answered words list
+
+        correct_words.delete(0, END)                                                        #clears correctly answered words list
         compare_list.clear()
+
+        word_list = flash_card_set_list.get(flash_card_set_list.curselection())             #file select based on user click
+
         #db stuff
         rows = cursor.execute('SELECT title, flash_dict, flash_compare_list, flash_study_list FROM flash_cards WHERE title = ?', (word_list,)).fetchall()
+
         sel_list_name = ""
         selected_dic.clear()
-        sel_list_name = sel_list_name + str(rows[0][0])
+
+        sel_list_name = sel_list_name + str(rows[0][0])                                     #adds selected set file name to global var
+
         db_dict_as_dict = json.loads(rows[0][1])
-        comp_list = rows[0][2]
-        study_list = rows[0][3]
+        selected_dic.update(db_dict_as_dict)                                                #adds selected set dictionary to global var
         db_dict_vals = list(db_dict_as_dict.values())
         db_dict_keys = list(db_dict_as_dict.keys())
-        if comp_list != '[]':
+
+        comp_list = rows[0][2]                                                              #adds selected set compare list to global var
+        study_list = rows[0][3]                                                             #adds selected set words to study list to global var
+
+        if comp_list != '[]':                                                               #checks if there are any saved correct words and adds them if there are
             compare_list = json.loads(comp_list)
             for item in compare_list:
                 insert_list = db_dict_as_dict[item]
-                correct_words.insert('end', insert_list)        #new_comp_list = db_dict_as_dict[db_dict_as_dict.index(comp_list)]
-        if study_list != '[]':
+                correct_words.insert('end', insert_list)
+
+        if study_list != '[]':                                                              #checks if there are any saved wrong words and adds them if there are
             words_to_study = json.loads(study_list)
             for item in words_to_study:
                 study_insert_list = db_dict_as_dict[item]
                 words_to_study_box.insert('end', study_insert_list)
 
 
-        selected_dic.update(db_dict_as_dict)
-
 
 def create_dict():
     global selected_dic, selected_dic_val_list, selected_dic_key_list
     selected_dic_key_list.clear()
     selected_dic_val_list.clear()
+
     for values in list(selected_dic.values()):
         selected_dic_val_list.append(values)
+
     for keys in list(selected_dic.keys()):
         selected_dic_key_list.append(keys)
 
@@ -81,9 +97,7 @@ def generate_random_word():
     global temp_list, compare_list, selected_dic, selected_dic_key_list, selected_dic_val_list, words_to_study
     definiton_list = list(selected_dic)                                                      #turns the dictionary into a list
     word = random.choice(selected_dic_val_list)                                              #picks random word from the dictionary
-
     real_definition = selected_dic_key_list[selected_dic_val_list.index(word)]               #returns the real definition of the chosen word
-
 
     if len(compare_list) == len(definiton_list):                    #prompts the user to restart or quit
         restart_window()
@@ -98,7 +112,7 @@ def generate_random_word():
 
 
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - END OF MAIN FUNCTIONS -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
-#  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #
+
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - SECONDARY FUNCTIONS -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 def show_word():
     generate_random_word()                                          #generates a new word
@@ -114,7 +128,9 @@ def show_definition(widget):
     global compare_list, word_study, words_to_study
     input_definition.bind('<Return>', lambda event:[clear(), hide_definition(correct_definition)])
     answer_button.configure(state='disabled')
+
     widget.pack()                                                   #unhides the correct definition text box widget
+
     real_definition = temp_list[1]
     answer = input_definition.get("1.0", "end").strip().lower()     #strips user input to get raw input
     the_answer = f"The correct answer is: {real_definition}"
@@ -125,16 +141,22 @@ def show_definition(widget):
         compare_list.append(answer)                                 #adds list to internal counter
         correct_definition.insert(INSERT, 'Correct!')               #display 'correct!' to user
         correct_definition.configure(state='disabled')
-        if word_study == True:
+
+        if word_study == True:                                      #on restart of words to study, allows adding them to correct words(compare_list)
             words_to_study.remove(real_definition)
             words_to_study_box.delete('end', temp_list[0])
+
     else:
-        if real_definition in words_to_study:
+
+        if real_definition in words_to_study:                       #prevents multiple wrong entries
+            correct_definition.insert(INSERT, the_answer)
+            correct_definition.configure(state='disabled')
             pass
-        else:
+
+        else:                                                       #displays the correct answer to the user
             words_to_study_box.insert('end', temp_list[0])
             words_to_study.append(real_definition)
-            correct_definition.insert(INSERT, the_answer)               #displays the correct answer to the user
+            correct_definition.insert(INSERT, the_answer)
             correct_definition.configure(state='disabled')
 
 
@@ -142,7 +164,9 @@ def hide_definition(widget):                                        #hides the d
     global show
     answer_button.configure(state='normal')
     input_definition.bind('<Return>', lambda event:[show_definition(correct_definition)])
+
     show = False
+
     widget.pack_forget()
 
 
@@ -158,39 +182,55 @@ def clear():                                                        #resets all 
     show_word()
 
 
+def on_closing():                                                       #quit box asking if user wants to quit and also saves current state of a set
+    global compare_list
+    if box.askokcancel("Quit", "Do you want to quit?"):
+        database_update()
+        window.destroy()
+
+
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - DELETING A SET -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 def confirm_delete():
     delete = Toplevel(window)
     delete.title("Delete?")
     delete.config(bg=BACKGROUND_COLOR)
 
-    delete_label = Label(delete, text=f"Are you sure you want to delete {sel_list_name}?")
-    delete_label.config(bg=BACKGROUND_COLOR)
+    delete_label = Label(delete, text=f"Are you sure you want to delete {sel_list_name}?", bg=BACKGROUND_COLOR)
     delete_label.grid(row=1, column=5)
+
     yes_button = tk.Button(delete, height = 2,width = 20,text ="Yes", command=lambda: [delete_list(sel_list_name), quit(delete)])
     yes_button.grid(row=4, column=5, pady=5)
+
     no_button = tk.Button(delete, height = 2,width = 20,text ="No", command=lambda: quit(delete))
     no_button.grid(row=5, column=5, pady=5)
+
+    delete.resizable(False, False)
 
 
 def delete_list(sel_list_name):
     cursor.execute("DELETE FROM flash_cards WHERE title = ?",(sel_list_name,))
     connection.commit()
+
     flash_card_set_list.delete(tk.ANCHOR)
 
 
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - RESTARTING -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 def restart_window():                                               #new top level window asking to restart
+    global words_to_study
     top = Toplevel(window)
     top.config(bg=BACKGROUND_COLOR)
     top.title("Restart?")
+
     next_word.configure(state='disabled')
     answer_button.configure(state='disabled')
+
     restart_label = Label(top, text="Congrats! You got everything right! Would you like to restart or study words to learn?")
     restart_label.grid(row=1, column=5)
     restart_label.config(bg=BACKGROUND_COLOR)
+
     restart_button = tk.Button(top, height = 2, width = 20, text ="Restart", command=lambda: restart(top))
     restart_button.grid(row=5, column=5, pady=5)
+
     if len(words_to_study) != 0:
         study_words_button = tk.Button(top, height = 2, width = 20, text ="Study Words", command=lambda: words_to_learn_restart(top))
         study_words_button.grid(row=6, column=5, pady=5)
@@ -198,37 +238,55 @@ def restart_window():                                               #new top lev
     close_button = Button(top, height = 2,width = 20,text ="Close", command=lambda: quit(window))
     close_button.grid(row=7, column=5, pady=5)
 
+    top.resizable(False, False)
+
+
 def quit(self):
     self.destroy()
+
 
 def words_to_learn_restart(self):
     global selected_dic_key_list, selected_dic_val_list, selected_dic, compare_list, words_to_study, word_study
     next_word.configure(state='normal')
     answer_button.configure(state='normal')
-    new_compare_list = list(set(compare_list).symmetric_difference(words_to_study))
+
+    new_compare_list = list(set(compare_list).symmetric_difference(words_to_study)) #compares which answers are in compare list and words_to_study and returns words correct on first guess
+
     compare_list.clear()
     correct_words.delete(0, END)
+
     for item in new_compare_list:
         new_words_list = selected_dic[item]
         correct_words.insert('end', new_words_list)
         compare_list.append(item)
+
     self.destroy()
+
     word_study = True
+
     show_word()
+
 
 def restart(self):                                                  #closes window and restarts flash deck
     global word_study
     next_word.configure(state='normal')
     answer_button.configure(state='normal')
+
     correct_words.delete(0, END)                                    #clears correctly answered words list
     compare_list.clear()                                            #clears internal counter
+
     words_to_study_box.delete(0,END)
     words_to_study.clear()
+
     self.destroy()
+
     word_study = False
+
     show_word()                                                     #generates new word
+
+
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - END OF SECONDARY FUNCTIONS -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
-#  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #
+
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - TOP LEVEL FUNCTIONS -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 def create_card():
     flash = {}
@@ -239,6 +297,7 @@ def create_card():
 
     create_ui = top_level_ui(create, flash)
     create_ui.create_functions(create)
+    create.resizable(False, False)
 
 
 def edit_list():
@@ -252,11 +311,11 @@ def edit_list():
     #definitions_as_dicts = create_dict()
     edit_ui = top_level_ui(edit, selected_dic)
     edit_ui.edit_functions(edit, sel_list_name, selected_dic_val_list, selected_dic_key_list)
-    print(selected_dic_key_list)
-    print(selected_dic_val_list)
+    edit.resizable(False, False)
+
 
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - END OF TOP LEVEL FUNCTIONS -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
-#  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #
+
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - TOP LEVEL INTERFACE -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 class top_level_ui():
     def __init__(self, window_name, dictionary):
@@ -383,7 +442,7 @@ class top_level_ui():
 
 
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - END OF TOP LEVEL INTERFACE -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
-#  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #
+
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - TOP LEVEL UI FUNCTIONS -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 def create_dict_list(dictionary, word):
     val_list = list(dictionary.values())                            #creates a list of the values (word)
@@ -391,26 +450,23 @@ def create_dict_list(dictionary, word):
     definition = key_list[val_list.index(word)]                     #turns the dictionary into a list
     return definition
 
-def database_insert(a_set_name, a_new_dict, a_comp_list, a_study_list):
+
+def database_insert(a_set_name, a_new_dict, a_comp_list, a_study_list): #creates new row in database
     cursor.execute(f"""INSERT INTO flash_cards(title, flash_dict, flash_compare_list, flash_study_list)VALUES(?,?,?,?)""", (a_set_name, a_new_dict, a_comp_list, a_study_list,)) # passing a dictionary and not a string
     connection.commit()
 
-def database_delete(a_set_name, a_new_dict, a_comp_list, a_study_list):
+
+def database_delete(a_set_name, a_new_dict, a_comp_list, a_study_list): #deletes current set
     cursor.execute("DELETE FROM flash_cards WHERE title = ?",(a_set_name,))
     database_insert(a_set_name, a_new_dict, a_comp_list, a_study_list)
 
-def database_update():
+
+def database_update():                                                  #updates current set
     global sel_list_name, compare_list, words_to_study
     json_comp_list = json.dumps(compare_list)
     json_study_list = json.dumps(words_to_study)
     cursor.execute("UPDATE flash_cards SET flash_compare_list = ?, flash_study_list = ? WHERE title = ?",(json_comp_list, json_study_list, sel_list_name))
     connection.commit()
-
-def on_closing():
-    global compare_list
-    if box.askokcancel("Quit", "Do you want to quit?"):
-        database_update()
-        window.destroy()
 
 
 def save(dict_name, title):                                         #saves and updates file with user inputted file name and closes window
@@ -418,39 +474,46 @@ def save(dict_name, title):                                         #saves and u
     new_dict = json.dumps(dict_name)
     comp_list = json.dumps([])
     stdy_list = json.dumps([])
+
     database_insert(set_name, new_dict, comp_list, stdy_list)
 
-
     flash_card_set_list.insert('end', set_name)
+
 
 def edit_save(dict_name, title):
     set_name = str(title.get("1.0", "end").strip())
     new_dict = json.dumps(dict_name)
     comp_list = json.dumps([])
     stdy_list = json.dumps([])
+
     database_delete(set_name, new_dict, comp_list, stdy_list)
+
     flash_card_set_list.delete(tk.ANCHOR)
     flash_card_set_list.insert('end', set_name)
 
+
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - END OF TOP LEVEL UI FUNCTIONS -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
-#  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #
+
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - DISPLAY -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 #  *  *  *  *  *  *  *  *  - FLASH CARD SETS -  *  *  *  *  *  *  *  *
-
 flash_card_set_list.pack(side = LEFT)
 frame.pack(padx = 30, pady = 30)
+
 
 #  *  *  *  *  *  *  *  *  - WORDS TO LEARN -  *  *  *  *  *  *  *  *
 words_to_study_box.pack(side=RIGHT)
 frame.pack(padx=30, pady=30)
+
 words_to_study_label = Label(window, text='Words to learn', bg=BACKGROUND_COLOR)
 words_to_study_label.place(x=525, y=5)
+
+
 #  *  *  *  *  *  *  *  *  - CORRECT WORDS -  *  *  *  *  *  *  *  *
 correct_words.pack(side=RIGHT)
 frame.pack(padx=30, pady=30)
+
 correct_words_label = Label(window, text='Correct Words', bg=BACKGROUND_COLOR)
 correct_words_label.place(x=400, y=5)
-
 
 
 #  *  *  *  *  *  *  *  *  - CURRENT WORDS -  *  *  *  *  *  *  *  *
@@ -471,7 +534,7 @@ input_definition.bind('<Return>', lambda event:show_definition(correct_definitio
 
 
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - END OF DISPLAY -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
-#  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #
+
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - BUTTONS -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 #  *  *  *  *  *  *  *  *  - DELETE SELECTED SET -  *  *  *  *  *  *  *  *
 delete_button = Button(frame, text = 'Delete set', command=lambda: [list_select(), confirm_delete()])
@@ -489,11 +552,9 @@ select_button.pack(side = TOP , padx = 5, pady = 5)
 edit_button = Button(frame, text = 'Edit set', command=lambda: [list_select(), create_dict(), edit_list()])
 edit_button.pack(side = TOP , padx = 5, pady = 10)
 
-
 #  *  *  *  *  *  *  *  *  - CHECK ANSWER -  *  *  *  *  *  *  *  *
 answer_button = Button(window, height = 2, width = 20, state='normal', text ="Check answer", command=lambda: show_definition(correct_definition))
 answer_button.pack(side = LEFT)
-
 
 #  *  *  *  *  *  *  *  *  - NEXT WORD -  *  *  *  *  *  *  *  *
 next_word = Button(window, height = 2,width = 20,text ="Next word", command=lambda: [clear(), hide_definition(correct_definition)])
@@ -501,7 +562,7 @@ next_word.pack(side = RIGHT)
 
 
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - END OF BUTTONS -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
-#  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #
 
+window.resizable(False, False)
 window.protocol("WM_DELETE_WINDOW", on_closing)
 window.mainloop()
