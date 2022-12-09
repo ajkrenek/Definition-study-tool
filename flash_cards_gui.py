@@ -10,10 +10,10 @@ window.title('Flash Card Memorizer')
 window.config(padx=50, pady=50, bg=BACKGROUND_COLOR)
 
 frame = Frame(window)
-flash_card_set_list = Listbox(frame)
+flash_card_set_list = Listbox(frame, width=20, height=20)
 
-correct_words = Listbox(frame)
-words_to_study_box = Listbox(frame)
+correct_words = Listbox(frame, width=50, height=20)
+words_to_study_box = Listbox(frame, width=50, height=20)
 
 
 connection = sqlite3.connect("flash_cards.db")
@@ -49,6 +49,7 @@ def list_select():
         correct_words.delete(0, END)                                                        #clears correctly answered words list
         compare_list.clear()
 
+        words_to_study_box.delete(0, END)
         word_list = flash_card_set_list.get(flash_card_set_list.curselection())             #file select based on user click
 
         #db stuff
@@ -224,7 +225,7 @@ def restart_window():                                               #new top lev
     next_word.configure(state='disabled')
     answer_button.configure(state='disabled')
 
-    restart_label = Label(top, text="Congrats! You got everything right! Would you like to restart or study words to learn?")
+    restart_label = Label(top, text="Congrats! You got everything right! Would you like to restart?")
     restart_label.grid(row=1, column=5)
     restart_label.config(bg=BACKGROUND_COLOR)
 
@@ -232,14 +233,36 @@ def restart_window():                                               #new top lev
     restart_button.grid(row=5, column=5, pady=5)
 
     if len(words_to_study) != 0:
+        restart_label = Label(top, text="Congrats! You got everything right! Would you like to restart or study words to learn?")
+
         study_words_button = tk.Button(top, height = 2, width = 20, text ="Study Words", command=lambda: words_to_learn_restart(top))
         study_words_button.grid(row=6, column=5, pady=5)
 
-    close_button = Button(top, height = 2,width = 20,text ="Close", command=lambda: quit(window))
+    close_button = Button(top, height = 2,width = 20,text ="Exit", command=lambda: quit(window))
     close_button.grid(row=7, column=5, pady=5)
 
     top.resizable(False, False)
 
+def force_restart_window():                                               #new top level window asking to restart
+    global sel_list_name
+    top = Toplevel(window)
+    top.config(bg=BACKGROUND_COLOR)
+    top.title("Restart?")
+
+    next_word.configure(state='disabled')
+    answer_button.configure(state='disabled')
+
+    restart_label = Label(top, text=f"Are you sure you want to reset {sel_list_name}?")
+    restart_label.grid(row=1, column=5)
+    restart_label.config(bg=BACKGROUND_COLOR)
+
+    restart_button = tk.Button(top, height = 2, width = 20, text ="Restart", command=lambda: restart(top))
+    restart_button.grid(row=5, column=5, pady=5)
+
+    close_button = Button(top, height = 2,width = 20,text ="Close", command=lambda: quit(top))
+    close_button.grid(row=7, column=5, pady=5)
+
+    top.resizable(False, False)
 
 def quit(self):
     self.destroy()
@@ -328,7 +351,7 @@ class top_level_ui():
         self.current_words.config(bg=BACKGROUND_COLOR)
         self.current_words.grid(row=6, column=1)
 
-        self.current_words = Listbox(window_name)
+        self.current_words = Listbox(window_name, width=50, height=20)
         self.current_words.grid(row=7, column=1)
 
 
@@ -337,7 +360,7 @@ class top_level_ui():
         self.current_definitions.config(bg=BACKGROUND_COLOR)
         self.current_definitions.grid(row=6, column=2)
 
-        self.current_definitions = Listbox(window_name)
+        self.current_definitions = Listbox(window_name, width=50, height=20)
         self.current_definitions.grid(row=7, column=2)
 
 
@@ -346,7 +369,7 @@ class top_level_ui():
         self.new_title_label.config(bg=BACKGROUND_COLOR)
         self.new_title_label.grid(row=2, column=4)
 
-        self.new_title = Text(window_name, wrap=WORD, height = 1, width = 20, bg = 'light pink')
+        self.new_title = Text(window_name, wrap=WORD, height = 1, width = 50, bg = 'light pink')
         self.new_title.grid(row=3, column=4)
 
 
@@ -355,7 +378,7 @@ class top_level_ui():
         self.new_word_label.config(bg=BACKGROUND_COLOR)
         self.new_word_label.grid(row=4, column=4)
 
-        self.new_word = Text(window_name, wrap=WORD, height = 1, width = 20, bg = 'light yellow')
+        self.new_word = Text(window_name, wrap=WORD, height = 1, width = 50, bg = 'light yellow')
         self.new_word.grid(row=5, column=4)
 
 
@@ -364,7 +387,7 @@ class top_level_ui():
         self.new_definition_label.config(bg=BACKGROUND_COLOR)
         self.new_definition_label.grid(row=6, column=4)
 
-        self.new_definition = Text(window_name, wrap=WORD, height = 10, width = 50, bg = 'light blue')
+        self.new_definition = Text(window_name, wrap=WORD, height = 20, width = 50, bg = 'light blue')
         self.new_definition.grid(row=7, column=4)
 
         self.delete_set = tk.Button(window_name, height = 2,width = 20,text ="Delete selection", command=lambda: self.word_delete())
@@ -378,7 +401,7 @@ class top_level_ui():
         self.add_button = tk.Button(window_name, height = 2,width = 20,text ="Add card", command=lambda: self.add('create'))
         self.add_button.grid(row=8, column=4)
 
-        self.save_button = tk.Button(window_name, height = 2,width = 20,text ="Save set", command=lambda: [save(self.dictionary, self.new_title), quit(window_name), list_select()])
+        self.save_button = tk.Button(window_name, height = 2,width = 20,text ="Save set", command=lambda: [save(self.dictionary, self.new_title), list_select()])
         self.save_button.grid(row=8, column=2)
 
 
@@ -399,8 +422,11 @@ class top_level_ui():
 #                              *  *  *  *  *  *  *  *  - EDIT BUTTONS - *  *  *  *  *  *  *  *
         self.add_button = tk.Button(window_name, height = 2,width = 20,text ="Add card", command=lambda: self.add('edit'))
         self.add_button.grid(row=8, column=4)
-        self.save_button = tk.Button(window_name, height = 2,width = 20,text ="save set", command=lambda: [edit_save(self.dictionary, self.new_title), quit(window_name), list_select()])
+        self.save_button = tk.Button(window_name, height = 2,width = 20,text ="save set", command=lambda: [edit_save(self.dictionary, self.new_title), self.confirm(), list_select()])
         self.save_button.grid(row=8, column=2)
+
+    def confirm(self):
+        tk.messagebox.showinfo("Saving!", f"Flash card set {self.new_title.get('1.0', 'end-1c')} saved!", parent=self.window_name)
 
 
     def word_edit_on_click(self, event):                            #user can select word from list to edit word/definition
@@ -444,6 +470,8 @@ class top_level_ui():
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - END OF TOP LEVEL INTERFACE -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - TOP LEVEL UI FUNCTIONS -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
+
+
 def create_dict_list(dictionary, word):
     val_list = list(dictionary.values())                            #creates a list of the values (word)
     key_list = list(dictionary.keys())                              #creates a list of the keys (definitions)
@@ -505,7 +533,7 @@ words_to_study_box.pack(side=RIGHT)
 frame.pack(padx=30, pady=30)
 
 words_to_study_label = Label(window, text='Words to learn', bg=BACKGROUND_COLOR)
-words_to_study_label.place(x=525, y=5)
+words_to_study_label.place(x=650, y=5)
 
 
 #  *  *  *  *  *  *  *  *  - CORRECT WORDS -  *  *  *  *  *  *  *  *
@@ -513,11 +541,11 @@ correct_words.pack(side=RIGHT)
 frame.pack(padx=30, pady=30)
 
 correct_words_label = Label(window, text='Correct Words', bg=BACKGROUND_COLOR)
-correct_words_label.place(x=400, y=5)
+correct_words_label.place(x=345, y=5)
 
 
 #  *  *  *  *  *  *  *  *  - CURRENT WORDS -  *  *  *  *  *  *  *  *
-displayed_word = Text(window, wrap=WORD, state='normal', height = 5, width = 20, bg = 'light yellow')
+displayed_word = Text(window, wrap=WORD, state='normal', height = 5, width = 100, bg = 'light yellow')
 displayed_word.pack(fill="none", expand=TRUE)
 
 
@@ -536,25 +564,34 @@ input_definition.bind('<Return>', lambda event:show_definition(correct_definitio
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - END OF DISPLAY -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 
 # ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~  - BUTTONS -  ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
+
 #  *  *  *  *  *  *  *  *  - DELETE SELECTED SET -  *  *  *  *  *  *  *  *
-delete_button = Button(frame, text = 'Delete set', command=lambda: [list_select(), confirm_delete()])
-delete_button.pack(side = BOTTOM , padx = 5, pady = 5)
+res_button = Button(frame, height = 2, text = 'Restart set', command=lambda: [force_restart_window()])
+res_button.pack(side = BOTTOM , padx = 5, pady = 10)
+
+#  *  *  *  *  *  *  *  *  - DELETE SELECTED SET -  *  *  *  *  *  *  *  *
+delete_button = Button(frame,height = 2, text = 'Delete set', command=lambda: [list_select(), confirm_delete()])
+delete_button.pack(side = BOTTOM , padx = 5, pady = 10)
 
 #  *  *  *  *  *  *  *  *  - CREATE NEW SET -  *  *  *  *  *  *  *  *
-create_button = Button(frame, text = 'Create set', command=create_card)
-create_button.pack(side = BOTTOM , padx = 5, pady = 10)
+create_button = Button(frame,height = 2, text = 'Create set', command=create_card)
+create_button.pack(side = BOTTOM , padx = 5, pady = 20)
 
 #  *  *  *  *  *  *  *  *  - SELECT A FLASH SET -  *  *  *  *  *  *  *  *
-select_button = Button(frame, text = 'Select set', command=lambda: [database_update(), list_select(), create_dict(), show_word()])
-select_button.pack(side = TOP , padx = 5, pady = 5)
+select_button = Button(frame,height = 2, text = 'Select set', command=lambda: [database_update(), list_select(), create_dict(), show_word()])
+select_button.pack(side = TOP , padx = 5, pady = 10)
 
 #  *  *  *  *  *  *  *  *  - EDIT SELECTED SET -  *  *  *  *  *  *  *  *
-edit_button = Button(frame, text = 'Edit set', command=lambda: [list_select(), create_dict(), edit_list()])
+edit_button = Button(frame,height = 2, width = 7, text = 'Edit set', command=lambda: [list_select(), create_dict(), edit_list()])
 edit_button.pack(side = TOP , padx = 5, pady = 10)
 
 #  *  *  *  *  *  *  *  *  - CHECK ANSWER -  *  *  *  *  *  *  *  *
 answer_button = Button(window, height = 2, width = 20, state='normal', text ="Check answer", command=lambda: show_definition(correct_definition))
 answer_button.pack(side = LEFT)
+
+#  *  *  *  *  *  *  *  *  - OVERRIDE ANSWER -  *  *  *  *  *  *  *  *
+#override_button = Button(window, height = 2, width = 20, state='normal', text ="Override answer", command=lambda: show_definition(correct_definition))
+#override_button.pack(side = LEFT)
 
 #  *  *  *  *  *  *  *  *  - NEXT WORD -  *  *  *  *  *  *  *  *
 next_word = Button(window, height = 2,width = 20,text ="Next word", command=lambda: [clear(), hide_definition(correct_definition)])
