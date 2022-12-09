@@ -1,4 +1,4 @@
-# Definition-study-tool
+# Definition study tool
 
 ## A tool designed to help study definitions.
 
